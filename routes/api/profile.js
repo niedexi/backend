@@ -33,4 +33,13 @@ router.get(
   }
 );
 
+// @route   POST api/profile
+// @desc    Create user profile
+// @access  Private
+router.post(
+  "/",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {}
+);
+
 module.exports = router;
