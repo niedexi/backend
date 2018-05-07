@@ -4,6 +4,9 @@ const passport = require("passport");
 
 const router = express.Router();
 
+// load validation
+const validateProfileInput = require('../../validation/profile');
+
 // Load models
 const Profile = require("../../models/Profile");
 const User = require("../../models/User");
@@ -40,6 +43,14 @@ router.post(
   "/",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
+    const {errors, isValid} = validateProfileInput(req.body);
+
+    // check validation
+    if(!isValid) {
+      // return any error with 400 status
+      return res.status(400).json(errors);
+    }
+
     // get fields
     const profileFields = {};
     profileFields.user = req.user.id;
@@ -64,8 +75,34 @@ router.post(
     if(req.body.linkedin) profileFields.social.linkedin = req.body.linkedin;
     if(req.body.instagram) profileFields.social.instagram = req.body.instagram;
     
-    
-    }
+    Profile.findOne({user: req.user.id})
+      .then(profile => {
+        if (profile) {
+          // update
+          Profile.findOneAndUpdate(
+            {user: req.user.id}, 
+            {$set: profileFields}, 
+            {new: true}
+          )
+            .then(profile => res.json(profile));
+        }
+        else {
+          // create
+
+          // check if handel exists
+          Profile.findOne({handle: profileFields.handle})
+          .then(profile => {
+            if (profile) {
+              errors.handle = 'That handle already exists';
+              res.status(400).json(errors);
+            }
+
+            // save profile
+            new Profile(profileFields).save().then(profile => res.json(profile));
+          });
+
+        }
+      });
   }
 );
 
